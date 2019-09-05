@@ -1,9 +1,20 @@
+#Arquivo: main.py
+#Nomes: Gabriel Aureo e Matheus Vinícius
+#Curso: Ciência da Computação - UFRJ
+#Turma: 2019.2
+#Descrição: Implementação de uma série de algoritmos de Escalonamento de Processos
+#Entrada: Um arquivo entrada.txt contendo o número de processos, o tempo de entrada de inicio
+# de cada processo, a duração e a prioridade, agrupadas em fileiras horizontais
+#Saída: Um arquivo saida.txt contendo o resultado de cada algoritmo em uma tabela
+#Python 3.7.3
+
 from tabulate import tabulate
 from typing import List
 from sys import maxsize as maxInt
+import codecs
 
 class Task:
-    def __init__(self, id, arrival, duration, priority):
+    def __init__(self, id : int, arrival : float, duration : float, priority : int):
         self.id = id
         self.arrival = arrival
         self.duration = duration
@@ -16,7 +27,7 @@ class Task:
         return self.__str__()
  
 class TaskSet:
-    def __init__(self, tasks = []):
+    def __init__(self, tasks : List[Task] = []):
         self.tasks = tasks
 
     def addTask(self, task):
@@ -52,7 +63,7 @@ class SchedulingTable:
 
     def __str__(self):
         header = ["Algoritmo"]
-        table = [["Tempo Médio de Execução Tt"], ["Tempo médio de Espera Tw"], ["Número de trocas de contexto"], ["Tempo total de processamento"]]
+        table = [["Tempo Médio Tt"], ["Tempo Médio Tw"], ["Trocas de contexto"], ["Tempo total"]]
         for k,v in self.data.items():
             header.append(k)
             table[0].append(v.avgTt)
@@ -63,7 +74,7 @@ class SchedulingTable:
         return tabulate(table, headers=header, floatfmt=".1f")
             
 class SchedulingResult:
-    def __init__(self, avgTt = 0, avgTw = 0, switchs = 0, total = 0):
+    def __init__(self, avgTt : float = 0, avgTw : float = 0, switchs : int = 0, total : int = 0):
         self.avgTt = avgTt
         self.avgTw = avgTw
         self.switchs = switchs
@@ -94,10 +105,11 @@ def fcfs(tasks : List[Task]):
     time = 0
     queue = sorted(tasks,key=lambda x:x.arrival)
 
-    for i in range(0, len(queue)):
-        tt += time - queue[i].arrival
+    for i in range(len(queue)):
         time += queue[i].duration
-        tw += time - queue[i].arrival
+        tt += time - queue[i].arrival
+        
+        tw += time - queue[i].duration - queue[i].arrival
     tw /= len(queue)
     tt /= len(queue)
 
@@ -198,33 +210,58 @@ def sjf(tasks : List[Task]):
     return SchedulingResult(avgTime, avgWait, switchs - 1, time)
 
 def rr(tasks : List[Task]):
-    rt = [0] * len(tasks)
-    wt = [0] * len(tasks)
+    n = len(tasks)
+    rt = [0] * n
+    wt = [0] * n
+    tt = [0] * n
+    queue = []
     t = 0
+    p = -1
+    switchs = 0
     quantum = 2
     completed = 0 
 
     for i in range(len(tasks)):
         rt[i] = tasks[i].duration
+            
 
-    while(True):
-        done = True
+    while(completed != n):
+        _p = p
+        for i in range(n):
+            if(p != -1 and p == i):
+                continue
+            if(rt[i] > 0 and tasks[i].arrival <= t):
+                exists = False
+                for j in range(len(queue)):
+                    if queue[j] == i:
+                        exists = True
+                        break
+                if not exists:
+                    queue.append(i)
 
-        for i in range(len(tasks)):
-            if(tasks[i].arrival <= t):
-                if(rt[i] > 0):
-                    done = False
-                    if(rt[i] > quantum):
-                        t += quantum
-                        rt[i] -= quantum
-                    else:
-                        t += rt[i]
-                        wt[i] = t - tasks[i].duration - tasks[i].arrival
-                        rt[i] = 0
-                
-        if done:
-            break
-    return SchedulingResult()
+        
+        p = queue.pop(0)
+        if(_p!= -1 and _p!= p):
+            switchs += 1
+
+        rt[p] -= quantum
+        
+        t += quantum 
+        if(rt[p]<0):
+            t+= rt[p]
+
+        if(rt[p] <= 0):
+            completed += 1
+            tt[p] = t - tasks[p].arrival
+            wt[p] = tt[p] - tasks[p].duration
+        
+            
+        
+    
+    
+    avgTw = sum(wt) / n
+    avgTt = sum(tt) / n
+    return SchedulingResult(avgTt, avgTw, switchs, t)
 
 def prioc(tasks : List[Task]):
     tw = 0
@@ -297,26 +334,75 @@ def priod(tasks : List[Task]):
     n = len(tasks)
     rt = [0] * n
     pd = [0] * n
+    tt = [0] * n
+    wt = [0] * n
+    completed = 0
+    p = 0 
+    t = 0
+    hp = 0
+    switchs = 0
+    check = False
 
     for i in range(n):
-        rt = tasks[i].duration
-        pd = tasks[i].priority
+        rt[i] = tasks[i].duration
+        pd[i] = tasks[i].priority
     
+    while(completed != n):
+        _p = p
+        for i in range(n):
+            if(tasks[i].arrival <= t and rt[i] > 0 and pd[i] >= hp):
+                p = i
+                hp = pd[p]
+                check = True
+
+        pd[p] = tasks[p].priority
+
+        if(_p != p):
+            switchs += 1
+
+        #if there's no task to be executed, advance 
+        if(not check):
+            t+= 1
+            continue
+
+        rt[p] -= 1
+
+        if(rt[p] == 0):
+            completed += 1
+            tt[p] = t - tasks[p].arrival + 1
+            wt[p] = tt[p] - tasks[p].duration
+            
+            check = False
+            hp = 0     
+
+        
+        for i in range(n):
+            if(i != p and rt[i]>0 and tasks[i].arrival <= t and (pd[i] - tasks[i].priority) <= 3):
+                pd[i] += 1
+
+        t+= 1
     
-    return SchedulingResult()
+    avgTw = sum(wt) / n
+    avgTt = sum(tt) / n
+
+    return SchedulingResult(avgTt, avgTw, switchs, t)
 
 
 def main():
     table = SchedulingTable()
     taskSet = readFile()
     table.appendResult("FCFS", fcfs(taskSet.tasks))
-    table.appendResult("SRTF", srtf(taskSet.tasks))
-    table.appendResult("SJF", sjf(taskSet.tasks))
     table.appendResult("RR", rr(taskSet.tasks))
+    table.appendResult("SJF", sjf(taskSet.tasks))
+    table.appendResult("SRTF", srtf(taskSet.tasks))    
     table.appendResult("PRIOc", prioc(taskSet.tasks))
     table.appendResult("PRIOp", priop(taskSet.tasks))
     table.appendResult("PRIOd", priod(taskSet.tasks))
     print(table)
+
+    o = codecs.open("saida.txt", "w", "utf-8-sig")
+    o.write(str(table))
+    o.close()
 
 
 main()

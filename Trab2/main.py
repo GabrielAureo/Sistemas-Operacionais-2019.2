@@ -88,7 +88,7 @@ def readFile():
     
     return taskSet
 
-def fcfs(tasks):
+def fcfs(tasks : List[Task]):
     tw = 0
     tt = 0
     time = 0
@@ -104,7 +104,7 @@ def fcfs(tasks):
     result = SchedulingResult(tt,tw, len(queue) - 1, time)
     return result
 
-def srtf(tasks):
+def srtf(tasks : List[Task]):
     rt = [0] * len(tasks)
     wt = [0] * len(tasks)
     tt = [0] * len(tasks)
@@ -160,7 +160,7 @@ def srtf(tasks):
     result = SchedulingResult(avgTime,avgWait,switchs,time)
     return result
     
-def sjf(tasks):
+def sjf(tasks : List[Task]):
     rt = [0] * len(tasks)
     wt = [0] * len(tasks)
     tt = [0] * len(tasks)
@@ -197,7 +197,7 @@ def sjf(tasks):
 
     return SchedulingResult(avgTime, avgWait, switchs - 1, time)
 
-def rr(tasks):
+def rr(tasks : List[Task]):
     rt = [0] * len(tasks)
     wt = [0] * len(tasks)
     t = 0
@@ -226,7 +226,7 @@ def rr(tasks):
             break
     return SchedulingResult()
 
-def prioc(tasks):
+def prioc(tasks : List[Task]):
     tw = 0
     tt = 0
     time = 0
@@ -246,12 +246,64 @@ def prioc(tasks):
     
     return SchedulingResult(tt,tw, len(tasks) - 1, time)
 
-def priop(tasks):
+def priop(tasks: List[Task]):
     n = len(tasks)
     rt = [0] * n
     wt = [0] * n
-    p = 0
+    tt = [0] * n
+    p = 0 #priority index
+    hp = 0 #highest priority
+    switchs = 0
+    t = 0
+
+    check = False
+    completed = 0
+    for i in range(n):
+        rt[i] = tasks[i].duration
+
+
+    while(completed != n):
+        _p = p
+        for i in range(n):
+            if(tasks[i].arrival <= t and rt[i] > 0 and tasks[i].priority >= hp):
+                p = i
+                hp = tasks[p].priority
+                check = True
+        if(_p != p): 
+            switchs += 1
+        if(not check):
+            t += 1
+            continue
+             
+        rt[p] -= 1
+
+        if(rt[p] == 0):
+            completed += 1
+            tt[p] = t - tasks[p].arrival + 1
+            wt[p] = tt[p] - tasks[p].duration
+            
+            check = False
+            hp = 0
+        
+        t += 1 
     
+    avgTt = sum(tt) / n
+    avgTw = sum(wt) / n
+
+    return SchedulingResult(avgTt, avgTw, switchs - 1, t)
+
+
+def priod(tasks : List[Task]):
+    n = len(tasks)
+    rt = [0] * n
+    pd = [0] * n
+
+    for i in range(n):
+        rt = tasks[i].duration
+        pd = tasks[i].priority
+    
+    
+    return SchedulingResult()
 
 
 def main():
@@ -262,6 +314,8 @@ def main():
     table.appendResult("SJF", sjf(taskSet.tasks))
     table.appendResult("RR", rr(taskSet.tasks))
     table.appendResult("PRIOc", prioc(taskSet.tasks))
+    table.appendResult("PRIOp", priop(taskSet.tasks))
+    table.appendResult("PRIOd", priod(taskSet.tasks))
     print(table)
 
 

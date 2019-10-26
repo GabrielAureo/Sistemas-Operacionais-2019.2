@@ -21,15 +21,14 @@ int nextRef(int *ref){
     // do{
     //     *ref = fgets(stdin);
     // }while(*ref == '\n');
-    while(1){
-        if(!fgets(str, 100, stdin)){
-            return -1;
-        }
-        //printf("%s", str);
-        sscanf(str, "%d", ref);
-        return 1;
-    }
     
+    if(!fgets(str, 100, stdin)){
+        return -1;
+    }
+    //printf("%s", str);
+    sscanf(str, "%d", ref);
+    return 1;
+       
 }
 
 void output(RESULTS r){

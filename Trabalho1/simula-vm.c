@@ -17,13 +17,19 @@ typedef struct{
 //Pega o próximo valor da entrada padrão, até chegar ao final da entrada
 //Retorna 0 caso chegue ao EOF ou 1 caso tenha uma referência
 int nextRef(int *ref){
-    do{
-        *ref = fgetc(stdin);
-    }while(*ref == '\n');
-    if(*ref == EOF){
-        return 0;
+    char str[100];
+    // do{
+    //     *ref = fgets(stdin);
+    // }while(*ref == '\n');
+    while(1){
+        if(!fgets(str, 100, stdin)){
+            return -1;
+        }
+        //printf("%s", str);
+        sscanf(str, "%d", ref);
+        return 1;
     }
-    return 1;
+    
 }
 
 void output(RESULTS r){
@@ -101,7 +107,7 @@ int lru(int n, int ref, TIMED_FRAME * frames){
         
     }
     frames[oldest].time = time;
-    printf("%d %d %d\n", frames[0].page, frames[1].page, frames[2].page);
+    //printf("%d %d %d\n", frames[0].page, frames[1].page, frames[2].page);
 
     time++;
     return faults;
@@ -133,8 +139,9 @@ int main(int argc, char * argv[]){
     }
     
     
-    while(nextRef(&page)){
-        page -= '0'; //converte código ascii para o valor inteiro
+    while(nextRef(&page) != -1){
+        //page -= '0'; //converte código ascii para o valor inteiro
+        //printf("%d ", page);
         results.references++;
         //printf("%d\n", page);
         results.fifo_faults = fifo(n, page, fifo_frames);
